@@ -1,4 +1,5 @@
 import os
+from tkinter.messagebox import QUESTION
 import unittest
 import json
 from flask_sqlalchemy import SQLAlchemy
@@ -18,6 +19,8 @@ class TriviaTestCase(unittest.TestCase):
         self.database_path = database_path = 'postgresql://postgres:{}/{}'.format('#Datascience1@localhost:5432', self.database_name)
         setup_db(self.app, self.database_path)
 
+        
+
         # binds the app to the current context
         with self.app.app_context():
             self.db = SQLAlchemy()
@@ -36,9 +39,151 @@ class TriviaTestCase(unittest.TestCase):
     Write at least one test for each test for successful operation and for expected errors.
     """
 
-    #-------------------test for get request for all categories-------------------
-    
+    def test_get_categories(self):        
+        res = self.client().get('/categories')
+        data = json.loads(res.data)
 
+        self.assertEqual(res.status_code,200)
+        self.assertEqual(data['success'],True)
+        self.assertEqual(data['categories'], data['categories'])
+
+    def test_404_get_categories_failed(self): 
+        res = self.client().get('/categoriess')
+        data =json.loads(res.data)
+
+        self.assertEqual(res.status_code,404)
+        self.assertEqual(data['success'],False)
+        self.assertEqual(data['error'],404)
+        self.assertEqual(data['message'],'resources not found')  
+
+
+    def test_get_paginated_questions(self):
+        res = self.client().get('/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code,200)
+        self.assertEqual(data['success'],True)
+        self.assertEqual(data['current_category'],None)
+        self.assertTrue(data['questions'])
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(len(data['questions']))
+
+    def test_404_get_questions_beyond_valid_page(self):
+        res =self.client().get('/questions?page=20000')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code,404)
+        self.assertEqual(data['success'],False)
+        self.assertEqual(data['error'],404)
+        self.assertEqual(data['message'],"resources not found")
+
+    
+    """def test_delete_question(self):
+        res = self.client().delete('/questions/13')
+        data = json.loads(res.data)
+
+        question = Question.query.filter(Question.id == 13).one_or_none()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['deleted'], 13)
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(len(data['questions']))
+        self.assertEqual(question,None)"""
+    
+    def test_404_delete_question_failed(self):
+        res = self.client().delete('/questions/336')
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code,422)
+        self.assertEqual(data['success'],False)
+        self.assertEqual(data['message'],"unprocessable")
+
+
+    def test_create_question(self):
+        new_question = {
+            'question': 'Who is the King of bollywood?',
+            'answer': 'SRK',
+            'category': '5',
+            'difficulty': 4}
+
+        res = self.client().post('/questions', json=new_question)
+        data = json.loads(res.data)
+        
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['created']),
+        self.assertTrue(len(data['questions'])),
+        self.assertTrue(data['total_questions'])
+    
+    def test_405_add_new_question_not_allowed(self):
+        new_question = {
+            'question': 'Who is the King of bollywood?',
+            'answer': 'SRK',
+            'category': '5',
+            'difficulty': 4}
+
+        res = self.client().post('/questions/45', json =new_question)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code,405)
+        self.assertEqual(data['success'],False)
+        self.assertEqual(data['message'],"method not allowed")    
+         
+    
+    def test_get_question_search_with_results(self):
+        res = self.client().post('/search', json={'search': 'What'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['total_questions'])
+        self.assertEqual(len(data['questions']), 3)
+
+    def test_get_book_search_not_found(self): 
+        res = self.client().post('/questions', json={'search': 'Make'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'resources not found')
+        #self.assertTrue(data['total_questions'], 0)
+        #self.assertTrue(len(data['questions']), 0)   
+
+
+    def test_questions_based_on_category(self):
+        res = self.client().get('/categories/1/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertNotEqual(len(data['questions']), 0)
+        self.assertEqual(data['current_category'], 'Entertainment')
+
+    def test_questions_based_on_category_not_found(self):
+        res = self.client().get('/categories/100/questions')
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 500)
+        self.assertEqual(data['success'], False)
+
+
+    def test_play_quiz(self):
+        res = self.client().post('/play', json={
+                                                'previous_questions':[19,20],
+                                                'quiz_category':{'id':'1','type':'Science'}
+                                                     })
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code,200)
+        self.assertEqual(data['sucecss'],True)
+        self.assertTrue(data['question'])
+     
+    def test_play_quiz_not_found(self):
+        res = self.client().post('/play', json={})   
+        data = json.loads(res.data)
+        
+        self.assertEqual(res.status_code,404)
+        self.assertEqual(data['sucecss'],False)
+        self.assertEqual(data['message'],"resources not found")    
+   
 
 # Make the tests conveniently executable
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ def create_app(test_config=None):
     """
     @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
     """
-    CORS(app)#, resources={r"*/api/*" : {'origins': "*"}})
+    CORS(app) #, resources={r"*/api/*" : {'origins': "*"}})
     
     
   #------------------------ALLOW HEADERS AND METHODS---------------------------  
@@ -112,6 +112,31 @@ def create_app(test_config=None):
         except:
           abort(404)
     
+
+    """
+    @TODO:
+    Create a GET endpoint to get questions based on category.
+
+    TEST: In the "List" tab / main screen, clicking on one of the
+    categories in the left column will cause only questions of that
+    category to be shown.
+    """
+
+    @app.route('/categories/<int:id>/questions', methods=['GET'])
+    def get_questions_by_category(id):
+        try:
+          questions = Question.query.all()
+          category = Category.query.filter_by(id=id).one_or_none()
+          selection = Question.query.filter_by(category=category.id).all()
+          question_page = paginate_questions(request, selection)
+
+          return jsonify({
+                    'success':True,
+                    'questions':question_page,
+                    'total_questions': len(questions),
+                    'current_categroy': category.format()['type']})
+        except:
+          abort(500)  
     
   #------------------------DELETE METHODS FOR IDs------------------------------  
     """
@@ -140,35 +165,9 @@ def create_app(test_config=None):
                 'total_questions': len(Question.query.all())})
             
         except:
-          abort(422)
+          abort(405)
 
-
-    """
-    @TODO:
-    Create a GET endpoint to get questions based on category.
-
-    TEST: In the "List" tab / main screen, clicking on one of the
-    categories in the left column will cause only questions of that
-    category to be shown.
-    """
-
-    @app.route('/categories/<int:id>/questions', methods=['GET'])
-    def get_questions_by_category(id):
-        try:
-          questions = Question.query.all()
-          category = Category.query.filter_by(id=id).one_or_none()
-          selection = Question.query.filter_by(category=category.id).all()
-          question_page = paginate_questions(request, selection)
-
-          return jsonify({
-                    'success':True,
-                    'questions':question_page,
-                    'total_questions': len(questions),
-                    'current_categroy': category.format()['type']})
-        except:
-          abort(500)  
-          
-    
+   
     
   #------------------CREATING QUESTIONS, CREATING BASED ON SEARCH TERMS--------------- 
     """
@@ -203,7 +202,7 @@ def create_app(test_config=None):
           current_questions = paginate_questions(request, selection)
           
           return jsonify({
-                'sucecss':True,
+                'success':True,
                 'created' :question.id,
                 'questions': current_questions,
                 'total_questions': len(Question.query.all())})
@@ -228,23 +227,20 @@ def create_app(test_config=None):
     def search_question():
         try:
           body = request.get_json()
-          searchTerm = body.get('searchTerm')
-          questions = Question.query.filter(Question.question.ilike(f'%{searchTerm}%')).all()
-          current_quesitons = paginate_questions(request,questions)
-          total_questions = len(Question.query.all())
+          search = body.get('search', None)
+          questions = Question.query.filter(Question.question.ilike(f'%{search}%')).all()
+          current_questions = paginate_questions(request,questions)
+          total_questions = len()
           category = Category.query.order_by(Category.id).all()
 
-          if (len(questions) == 0) or not category:
-              abort(404)
                   
           return jsonify({
               'success':True,
-              'questions': current_quesitons,
-              'total_questions': total_questions,
-              'current_categroy': category[0].format()['type']
+              'questions': current_questions,
+              'total_questions': len(Question.query.all()),
             })
         except:
-          abort(404)
+          abort(422)
     
     
     
@@ -261,15 +257,13 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
 
-    @app.route('/play', methods=['POST'])
+    @app.route('/quizzes', methods=['POST'])
     def play_quiz():
         questions = None  
         body = request.get_json()
         previous_questions = body.get('previous_questions')
         category = body.get('quiz_category')
     
-        if ((previous_questions is None) or (category is None)):
-              abort(400)
         try:
                
           if (category['id'] == 0):
@@ -278,11 +272,6 @@ def create_app(test_config=None):
           else:
             questions = Question.query.filter_by(category=category['id']).all()
             question = questions[random.randrange(0,len(questions),1)]
-        
-          # for q in questions:
-          #   if q.id not in previous_questions:
-          #     current_question = q.format()
-          #     break
             
           return jsonify({
             'success':True,
