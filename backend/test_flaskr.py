@@ -91,7 +91,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(len(data['questions']))
         self.assertEqual(question,None)"""
     
-    def test_404_delete_question_failed(self):
+    def test_422_delete_question_failed(self):
         res = self.client().delete('/questions/336')
         data = json.loads(res.data)
         self.assertEqual(res.status_code,422)
@@ -117,37 +117,36 @@ class TriviaTestCase(unittest.TestCase):
     
     def test_405_add_new_question_not_allowed(self):
         new_question = {
-            'question': 'Who is the King of bollywood?',
-            'answer': 'SRK',
-            'category': '5',
-            'difficulty': 4}
+            'question': 'Testing?',
+            'answer': '',
+            'category': 2,
+            'difficulty': ''}
 
-        res = self.client().post('/questions/45', json =new_question)
+        res = self.client().post('/questions', json =new_question)
         data = json.loads(res.data)
 
-        self.assertEqual(res.status_code,405)
+        self.assertEqual(res.status_code,422)
         self.assertEqual(data['success'],False)
-        self.assertEqual(data['message'],"method not allowed")    
+        self.assertEqual(data['message'],"unprocessable")    
          
     
-    def test_get_question_search_with_results(self):
-        res = self.client().post('/search', json={'search': 'What'})
+    def test_get_question_search_found(self):
+        res = self.client().post('/search', json={'searchTerm': 'name'})
         data = json.loads(res.data)
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
         self.assertTrue(data['total_questions'])
-        self.assertEqual(len(data['questions']), 3)
+        self.assertEqual(len(data['questions']), 2)
 
     def test_get_book_search_not_found(self): 
-        res = self.client().post('/questions', json={'search': 'Make'})
+        res = self.client().post('/questions', json={'search': 'In'})
         data = json.loads(res.data)
 
-        self.assertEqual(res.status_code, 404)
-        self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'resources not found')
-        #self.assertTrue(data['total_questions'], 0)
-        #self.assertTrue(len(data['questions']), 0)   
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['total_questions'], 0)
+        self.assertTrue(len(data['questions']), 0)   
 
 
     def test_questions_based_on_category(self):
@@ -157,7 +156,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
         self.assertNotEqual(len(data['questions']), 0)
-        self.assertEqual(data['current_category'], 'Entertainment')
+        self.assertEqual(data['current_category'], 'Science')
 
     def test_questions_based_on_category_not_found(self):
         res = self.client().get('/categories/100/questions')
@@ -167,13 +166,17 @@ class TriviaTestCase(unittest.TestCase):
 
 
     def test_play_quiz(self):
-        res = self.client().post('/play', json={
+        data = {
+            'previous_questions': [1, 4, 20, 15],
+        'quiz_category': 'current category'
+ }
+        res = self.client().post('/quizzes', json={
                                                 'previous_questions':[19,20],
                                                 'quiz_category':{'id':'1','type':'Science'}
                                                      })
         data = json.loads(res.data)
         self.assertEqual(res.status_code,200)
-        self.assertEqual(data['sucecss'],True)
+        self.assertEqual(data['success'],True)
         self.assertTrue(data['question'])
      
     def test_play_quiz_not_found(self):
@@ -181,7 +184,7 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         
         self.assertEqual(res.status_code,404)
-        self.assertEqual(data['sucecss'],False)
+        self.assertEqual(data['success'],False)
         self.assertEqual(data['message'],"resources not found")    
    
 

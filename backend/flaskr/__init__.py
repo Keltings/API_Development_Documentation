@@ -134,9 +134,9 @@ def create_app(test_config=None):
                     'success':True,
                     'questions':question_page,
                     'total_questions': len(questions),
-                    'current_categroy': category.format()['type']})
+                    'current_category': category.format()['type']})
         except:
-          abort(500)  
+          abort(500) 
     
   #------------------------DELETE METHODS FOR IDs------------------------------  
     """
@@ -146,10 +146,10 @@ def create_app(test_config=None):
     TEST: When you click the trash icon next to a question, the question will be removed.
     This removal will persist in the database and when you refresh the page.
     """
-    @app.route('/questions/<int:question_id>',methods=['DELETE'])
-    def delete_question(question_id):
+    @app.route('/questions/<int:id>',methods=['DELETE'])
+    def delete_question(id):
         try:
-          question =  Question.query.filter( Question.id ==question_id).one_or_none()
+          question =  Question.query.filter( Question.id ==id).one_or_none()
 
           if question is None:
             abort(404)
@@ -160,12 +160,12 @@ def create_app(test_config=None):
 
           return jsonify({
                 'success':True,
-                'deleted' : question_id,
+                'deleted' : id,
                 'questions': current_qestions,
                 'total_questions': len(Question.query.all())})
             
         except:
-          abort(405)
+          abort(422)
 
    
     
@@ -185,15 +185,10 @@ def create_app(test_config=None):
     def create_question():
         try:
           body = request.get_json()
-          new_question = body.get('question', None)
-          new_answer = body.get('answer', None)
-          new_category = body.get('category', None)
-          new_difficulty = body.get('difficulty',None)
-          
-          
-          if ((new_question is None) or (new_answer is None) 
-              or (new_difficulty is None) or (new_category is None)):
-            abort(422)
+          new_question = body.get('question')
+          new_answer = body.get('answer')
+          new_category = body.get('category')
+          new_difficulty = body.get('difficulty')
     
           question = Question(question=new_question, answer=new_answer, difficulty=new_difficulty, category=new_category)
           question.insert()
@@ -227,10 +222,10 @@ def create_app(test_config=None):
     def search_question():
         try:
           body = request.get_json()
-          search = body.get('search', None)
-          questions = Question.query.filter(Question.question.ilike(f'%{search}%')).all()
+          search = body.get('searchTerm')
+          questions = Question.query.filter(Question.question.ilike('%' + search + '%')).all()
           current_questions = paginate_questions(request,questions)
-          total_questions = len()
+          
           category = Category.query.order_by(Category.id).all()
 
                   
@@ -240,7 +235,7 @@ def create_app(test_config=None):
               'total_questions': len(Question.query.all()),
             })
         except:
-          abort(422)
+          abort(404)
     
     
     
@@ -257,53 +252,46 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
 
-    @app.route('/quizzes', methods=['POST'])
+    @app.route('/quizzes', methods=['GET', 'POST'])
     def play_quiz():
-        questions = None  
-        body = request.get_json()
-        previous_questions = body.get('previous_questions')
-        category = body.get('quiz_category')
-    
-        try:
-               
-          if (category['id'] == 0):
-            questions = Question.query.all()
-
-          else:
-            questions = Question.query.filter_by(category=category['id']).all()
-            question = questions[random.randrange(0,len(questions),1)]
-            
-          return jsonify({
-            'success':True,
-            'question': question.format()
-          }) 
-        except:
-          abort(400)  
-
-
-#-----------------------THE PATCH--------------------------
-
-    app.route('/questions/<int:question_id>', methods=['PATCH'])
-    def update_question(question_id):
-      body = request.get_json()
-
+      questions = None
       try:
-        question = Question.query.filter(Question.id == question_id).one_or_none()
-        if question is None:
-          abort(404)
+        body = request.get_json()
+        questions = None
+        previous_quizzes = body.get('previous_questions')
+        category_quiz = body.get('quiz_category') 
+        
+    
+        if ((previous_quizzes is None) or (category_quiz is None)):
+              abort(400)
+        
+               
+        if (category_quiz['id'] == 0):
+            questions = Question.query.all()
+            selected_quiz = questions[random.randrange(0,len(questions), 1)]
 
-        if 'answer' in body:
-          question.answer = str(body.get('answer'))
+        else:
+          questions = Question.query.filter_by(category=category_quiz['id']).all()
+          selected_quiz = questions[random.randrange(0,len(questions), 1)]
 
-          question.update()
-
-          return jsonify({
-            'success': True,
-            'id': question.id
-          })  
-
+        #potential_questions = [quiz for quiz in questions if quiz['id'] not in previous_quizzes]  
+          
+        return jsonify({
+            'success':True,
+            'question': {"answer": selected_quiz.answer,
+                        "category": selected_quiz.category,
+                        "difficulty": selected_quiz.difficulty,
+                        "id": selected_quiz.id,
+                        "question": selected_quiz.question
+                    },
+            'previous_question': 'previous_quizzes'
+            #'previous_question': potential_questions.format()
+          }) 
       except:
-        abort(400) 
+        abort(404)  
+
+
+
 
   #--------------------------ERROR HANDLING----------------------------------
     """
