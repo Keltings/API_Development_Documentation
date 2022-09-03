@@ -162,7 +162,7 @@ def create_app(test_config=None):
                 'success':True,
                 'deleted' : id,
                 'questions': current_qestions,
-                'total_questions': len(Question.query.all())})
+                'total_questions': len(current_qestions)})
             
         except:
           abort(422)
@@ -232,7 +232,7 @@ def create_app(test_config=None):
           return jsonify({
               'success':True,
               'questions': current_questions,
-              'total_questions': len(Question.query.all()),
+              'total_questions': len(questions),
             })
         except:
           abort(404)
