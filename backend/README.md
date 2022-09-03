@@ -77,7 +77,7 @@ The API will return these error types when requests fail:
 422: Not Processable
 500: Internal Server Error
 
-### Endpoints
+### Endpoints expected behaviours
 
 #### GET /categories
 
